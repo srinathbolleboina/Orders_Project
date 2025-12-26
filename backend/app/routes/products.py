@@ -166,14 +166,15 @@ def get_categories():
     """Get all product categories"""
     try:
         categories = db.session.query(Product.category).filter(
-            Product.is_active == True,
-            Product.category != None
+            Product.is_active.is_(True),
+            Product.category.isnot(None)
         ).distinct().all()
-        
+
         return jsonify({
             'categories': [cat[0] for cat in categories if cat[0]]
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Get categories error: {str(e)}")
         return jsonify({'error': 'Failed to get categories', 'message': str(e)}), 500
+

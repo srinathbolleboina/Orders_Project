@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Orders Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <div class="navbar-brand">Orders App</div>
+            <div class="navbar-menu">
+                <a href="products.html" class="navbar-link">Products</a>
+                <a href="cart.html" class="navbar-link" style="position: relative;">
+                    Cart
+                    <span id="cart-badge" class="cart-badge" style="display: none;">0</span>
+                </a>
+                <a href="orders.html" class="navbar-link">My Orders</a>
+                <a href="#" onclick="app.logout()" class="navbar-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 2rem;">
+        <h1>Shopping Cart</h1>
+
+        <div id="cart-container" style="margin-top: 2rem;">
+            <!-- Cart items will be loaded here -->
+        </div>
+
+        <div id="cart-summary" class="card"
+            style="max-width: 400px; margin-left: auto; margin-top: 2rem; display: none;">
+            <h3>Order Summary</h3>
+            <div style="display: flex; justify-content: space-between; margin: 1rem 0;">
+                <span>Subtotal:</span>
+                <span id="subtotal" class="product-price">$0.00</span>
+            </div>
+            <hr style="border-color: var(--border); margin: 1rem 0;">
+            <div style="display: flex; justify-content: space-between; margin: 1rem 0;">
+                <strong>Total:</strong>
+                <strong id="total" class="product-price">$0.00</strong>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="shipping-address">Shipping Address</label>
+                <textarea id="shipping-address" class="form-input" rows="3"
+                    placeholder="Enter your shipping address"></textarea>
+            </div>
+
+            <button onclick="proceedToCheckout()" class="btn btn-primary" style="width: 100%;">
+                Proceed to Checkout
+            </button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        let cartData = null;
+
+        async function loadCart() {
+            try {
+                app.showLoading();
+                cartData = await app.getCart();
+                renderCart();
+                app.hideLoading();
+            } catch (error) {
+                app.hideLoading();
+                app.showAlert('Failed to load cart: ' + error.message, 'error');
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-container');
+            const summary = document.getElementById('cart-summary');
+
+            if (!cartData || cartData.cart_items.length === 0) {
+                container.innerHTML = `
+                    <div class="card text-center">
+                        <h3>Your cart is empty</h3>
+                        <p class="text-muted">Add some products to get started!</p>
+                        <a href="products.html" class="btn btn-primary" style="margin-top: 1rem;">
+                            Browse Products
+                        </a>
+                    </div>
+                `;
+                summary.style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = cartData.cart_items.map(item => `
+                <div class="card" style="margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 1.5rem; align-items: center;">
+                        <img src="${item.product.image_url || 'https://via.placeholder.com/100'}" 
+                             alt="${item.product.name}" 
+                             style="width: 100px; height: 100px; object-fit: cover; border-radius: var(--radius-md);">
+                        
+                        <div style="flex: 1;">
+                            <h3>${item.product.name}</h3>
+                            <p class="text-muted">${app.formatCurrency(item.product.price)} each</p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <input type="number" 
+                                   value="${item.quantity}" 
+                                   min="1" 
+                                   max="${item.product.stock_quantity}"
+                                   onchange="updateQuantity(${item.id}, this.value)"
+                                   class="form-input" 
+                                   style="width: 80px;">
+                            
+                            <span class="product-price">${app.formatCurrency(item.subtotal)}</span>
+                            
+                            <button onclick="removeItem(${item.id})" class="btn btn-danger btn-sm">
+                                Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('subtotal').textContent = app.formatCurrency(cartData.total);
+            document.getElementById('total').textContent = app.formatCurrency(cartData.total);
+            summary.style.display = 'block';
+        }
+
+        async function updateQuantity(cartItemId, quantity) {
+            try {
+                await app.updateCartItem(cartItemId, parseInt(quantity));
+                await loadCart();
+                app.showAlert('Cart updated!', 'success');
+            } catch (error) {
+                app.showAlert('Failed to update cart: ' + error.message, 'error');
+                await loadCart(); // Reload to reset
+            }
+        }
+
+        async function removeItem(cartItemId) {
+            if (!confirm('Remove this item from cart?')) return;
+
+            try {
+                await app.removeFromCart(cartItemId);
+                await loadCart();
+                app.showAlert('Item removed from cart', 'success');
+            } catch (error) {
+                app.showAlert('Failed to remove item: ' + error.message, 'error');
+            }
+        }
+
+        async function proceedToCheckout() {
+            const address = document.getElementById('shipping-address').value;
+
+            if (!address.trim()) {
+                app.showAlert('Please enter a shipping address', 'error');
+                return;
+            }
+
+            try {
+                app.showLoading();
+                const order = await app.checkout({
+                    shipping_address: address,
+                    payment_method: 'credit_card'
+                });
+                app.hideLoading();
+
+                app.showAlert('Order placed successfully!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'orders.html';
+                }, 2000);
+            } catch (error) {
+                app.hideLoading();
+                app.showAlert('Checkout failed: ' + error.message, 'error');
+            }
+        }
+
+        loadCart();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,134 @@
+# Kubernetes Deployment Example
+# This is a sample configuration for deploying to Kubernetes
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: orders-app
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orders-config
+  namespace: orders-app
+data:
+  FLASK_ENV: "production"
+  DATABASE_URL: "sqlite:///data/orders.db"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: orders-secrets
+  namespace: orders-app
+type: Opaque
+stringData:
+  SECRET_KEY: "change-this-in-production"
+  JWT_SECRET_KEY: "change-this-in-production"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-backend
+  namespace: orders-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: orders-backend
+  template:
+    metadata:
+      labels:
+        app: orders-backend
+    spec:
+      containers:
+      - name: backend
+        image: orders-backend:latest
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: orders-config
+        - secretRef:
+            name: orders-secrets
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-backend-service
+  namespace: orders-app
+spec:
+  selector:
+    app: orders-backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-frontend
+  namespace: orders-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: orders-frontend
+  template:
+    metadata:
+      labels:
+        app: orders-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-frontend-service
+  namespace: orders-app
+spec:
+  selector:
+    app: orders-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: LoadBalancer

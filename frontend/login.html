@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Orders Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container" style="max-width: 500px; margin-top: 5rem;">
+        <div class="card">
+            <h1 class="text-center">Welcome Back</h1>
+            <p class="text-center text-muted mb-2">Sign in to your account</p>
+            
+            <div id="alert-container"></div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" class="form-input" required placeholder="you@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" class="form-input" required placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+            </form>
+            
+            <p class="text-center mt-2">
+                Don't have an account? <a href="register.html" style="color: var(--primary);">Register here</a>
+            </p>
+            
+            <div class="mt-2" style="padding: 1rem; background: rgba(99, 102, 241, 0.1); border-radius: var(--radius-md); border: 1px solid var(--primary);">
+                <p style="font-size: 0.875rem; margin-bottom: 0.5rem;"><strong>Demo Credentials:</strong></p>
+                <p style="font-size: 0.875rem; margin: 0.25rem 0;">Admin: admin@orders.com / admin123</p>
+                <p style="font-size: 0.875rem; margin: 0.25rem 0;">User: user@orders.com / user123</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                app.showLoading();
+                await app.login(email, password);
+                
+                // Redirect based on role
+                if (app.isAdmin()) {
+                    window.location.href = 'admin.html';
+                } else {
+                    window.location.href = 'products.html';
+                }
+            } catch (error) {
+                app.hideLoading();
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-error';
+                alertDiv.textContent = error.message || 'Login failed';
+                document.getElementById('alert-container').appendChild(alertDiv);
+                
+                setTimeout(() => alertDiv.remove(), 5000);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Orders - Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <div class="navbar-brand">Admin Dashboard</div>
+            <div class="navbar-menu">
+                <a href="admin.html" class="navbar-link">Dashboard</a>
+                <a href="admin-products.html" class="navbar-link">Products</a>
+                <a href="admin-orders.html" class="navbar-link">Orders</a>
+                <a href="#" onclick="app.logout()" class="navbar-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Manage Orders</h1>
+            <select id="status-filter" class="form-input" style="width: 200px;">
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+
+        <div id="orders-list">
+            <!-- Orders will be loaded here -->
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script>
+        async function loadOrders(status = null) {
+            try {
+                app.showLoading();
+                const data = await app.getAllOrders(status);
+                renderOrders(data.orders);
+                app.hideLoading();
+            } catch (error) {
+                app.hideLoading();
+                app.showAlert('Failed to load orders: ' + error.message, 'error');
+            }
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': 'badge-warning',
+                'processing': 'badge-primary',
+                'shipped': 'badge-primary',
+                'delivered': 'badge-success',
+                'cancelled': 'badge-danger'
+            };
+            return badges[status] || 'badge-primary';
+        }
+
+        function renderOrders(orders) {
+            const container = document.getElementById('orders-list');
+
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="card text-center"><p class="text-muted">No orders found</p></div>';
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                        <div>
+                            <h3>Order #${order.id}</h3>
+                            <p class="text-muted">User ID: ${order.user_id} | ${app.formatDate(order.created_at)}</p>
+                        </div>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <select onchange="updateStatus(${order.id}, this.value)" class="form-input" style="width: 150px;">
+                                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Processing</option>
+                                <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Shipped</option>
+                                <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>Delivered</option>
+                                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Shipping Address:</strong>
+                        <p class="text-muted">${order.shipping_address || 'N/A'}</p>
+                    </div>
+
+                    ${order.items && order.items.length > 0 ? `
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Items:</strong>
+                            ${order.items.map(item => `
+                                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                                    <span>${item.product ? item.product.name : 'Product'} × ${item.quantity}</span>
+                                    <span>${app.formatCurrency(item.subtotal)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 1.25rem;">Total: ${app.formatCurrency(order.total_amount)}</strong>
+                        <span class="badge ${getStatusBadge(order.status)}">${order.status.toUpperCase()}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateStatus(orderId, newStatus) {
+            try {
+                await app.updateOrderStatus(orderId, newStatus);
+                app.showAlert('Order status updated successfully', 'success');
+                const filterStatus = document.getElementById('status-filter').value;
+                await loadOrders(filterStatus || null);
+            } catch (error) {
+                app.showAlert('Failed to update status: ' + error.message, 'error');
+                await loadOrders();
+            }
+        }
+
+        document.getElementById('status-filter').addEventListener('change', (e) => {
+            const status = e.target.value;
+            loadOrders(status || null);
+        });
+
+        if (!app.isAdmin()) {
+            window.location.href = 'products.html';
+        } else {
+            loadOrders();
+        }
+    </script>
+</body>
+
+</html>

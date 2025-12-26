@@ -10,9 +10,11 @@ const state = {
     orders: []
 };
 
-// Initialize app
+// Initialize app state immediately
+loadFromLocalStorage();
+
+// Check auth and setup listeners
 document.addEventListener('DOMContentLoaded', () => {
-    loadFromLocalStorage();
     checkAuth();
 });
 

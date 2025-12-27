@@ -5,6 +5,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: orders_project-backend:latest
     container_name: orders-backend
     ports:
       - "5000:5000"

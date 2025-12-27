@@ -6,7 +6,3 @@ resources:
 
 commonLabels:
   managed-by: argocd
-
-images:
-  - name: orders-backend
-    newName: orders_project-backend

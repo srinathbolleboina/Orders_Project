@@ -46,7 +46,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: orders-backend:latest
+        image: orders_project-backend:latest
         ports:
         - containerPort: 5000
         envFrom:

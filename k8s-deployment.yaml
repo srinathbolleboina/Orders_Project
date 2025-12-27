@@ -47,7 +47,6 @@ spec:
       containers:
       - name: backend
         image: srinath2710/orders_project-backend:latest
-        image: orders_project-backend:latest
         imagePullPolicy: Never
         volumeMounts:
         - name: backend-data

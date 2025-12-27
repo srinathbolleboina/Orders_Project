@@ -15,7 +15,7 @@ metadata:
   namespace: orders-app
 data:
   FLASK_ENV: "production"
-  DATABASE_URL: "sqlite:///data/orders.db"
+  DATABASE_URL: "sqlite:////app/data/orders.db"
 
 ---
 apiVersion: v1
@@ -47,6 +47,10 @@ spec:
       containers:
       - name: backend
         image: orders_project-backend:latest
+        imagePullPolicy: Never
+        volumeMounts:
+        - name: backend-data
+          mountPath: /app/data
         ports:
         - containerPort: 5000
         envFrom:
@@ -73,6 +77,9 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+      volumes:
+      - name: backend-data
+        emptyDir: {}
 
 ---
 apiVersion: v1
